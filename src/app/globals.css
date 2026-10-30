@@ -1,0 +1,393 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Ascend design tokens. Style: editorial greeting on a tinted frame with a white sheet.
+  - The frame (sidebar + top bar) sits on a cool stone tint; the page is a white sheet.
+  - Colour goes on data: one moss green (--data) for the main series and progress fills.
+  - The primary action is ink, not the accent. Status colours are for status only.
+  - Surfaces separate by a tone step or a 1px border, never both, and never a resting shadow.
+*/
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+
+  --color-chrome: var(--chrome);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-rule: var(--rule);
+  --color-control: var(--control);
+  --color-data: var(--data);
+  --color-data-soft: var(--data-soft);
+  --color-data-track: var(--data-track);
+  --color-compare: var(--compare);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-pill-positive: var(--pill-positive-bg);
+  --color-pill-positive-ink: var(--pill-positive-ink);
+  --color-pill-negative: var(--pill-negative-bg);
+  --color-pill-negative-ink: var(--pill-negative-ink);
+  --color-pill-warning: var(--pill-warning-bg);
+  --color-pill-warning-ink: var(--pill-warning-ink);
+  --color-pill-neutral: var(--pill-neutral-bg);
+  --color-pill-neutral-ink: var(--pill-neutral-ink);
+  --color-pill-progress: var(--pill-progress-bg);
+  --color-pill-progress-ink: var(--pill-progress-ink);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --chrome: #f1f2ef;
+  --background: #ffffff;
+  --surface: #f7f7f5;
+  --surface-strong: #eeeeea;
+  --foreground: #1f201d;
+  --muted-foreground: #5e5f5b;
+  --border: #e6e6e1;
+  --rule: #f0f0ec;
+  --control: #d3d3cd;
+
+  --data: #46683f;
+  --data-soft: #dbe7d4;
+  --data-track: #ecece7;
+  /* Chart scale. Validated: data vs compare passes CVD and normal-vision separation (dataviz validator). */
+  --compare: #a3a39e;
+  /* The cairn mark: moss on light grounds. */
+  --logo: #46683f;
+  --heat-0: #e4e4df;
+  --heat-1: #d3e3cb;
+  --heat-2: #a5c596;
+  --heat-3: #6f9861;
+  --heat-4: #46683f;
+  --positive: #46683f;
+  --negative: #b42318;
+  --warning: #92400e;
+  --pill-positive-bg: #dcfae5;
+  --pill-positive-ink: #04250e;
+  --pill-negative-bg: #fdecea;
+  --pill-negative-ink: #7a1d14;
+  --pill-warning-bg: #fffbeb;
+  --pill-warning-ink: #92400e;
+  --pill-neutral-bg: #f0f0ec;
+  --pill-neutral-ink: #3d3d3a;
+  /* Part way there: moss, not orange. Orange is kept for things that are slipping. */
+  --pill-progress-bg: #e3eddd;
+  --pill-progress-ink: #2c4a26;
+
+  --habit-teal: #1b6e66;
+  --habit-ink: #3d3d3a;
+  --habit-moss: #5b7a2e;
+  --habit-clay: #a4532f;
+  --habit-slate: #4f6478;
+  --habit-rose: #a8405e;
+  --habit-ochre: #a07214;
+  --habit-sky: #2c74a8;
+
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: #ffffff;
+  --popover-foreground: var(--foreground);
+  --primary: #1f201d;
+  --primary-foreground: #ffffff;
+  --secondary: #ecece8;
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface);
+  --accent: #efefeb;
+  --accent-foreground: var(--foreground);
+  --destructive: var(--negative);
+  --input: var(--control);
+  --ring: #46683f;
+  --chart-1: var(--data);
+  --chart-2: #1f201d;
+  --chart-3: #8c8c88;
+  --chart-4: #c4c4bf;
+  --chart-5: #e2e2dd;
+  --grid: #ecece7;
+  --radius: 0.75rem;
+
+  --sidebar: var(--chrome);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #e3e4e0;
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+.dark {
+  --chrome: #0a0a0a;
+  --background: #111111;
+  --surface: #181818;
+  --surface-strong: #222222;
+  --foreground: #f2f2f0;
+  --muted-foreground: #b4b4b4;
+  --border: #262626;
+  --rule: #1d1d1d;
+  --control: #3d3d3d;
+
+  --data: #6b9e5c;
+  --data-soft: #233021;
+  --data-track: #262626;
+  --compare: #5e5e5e;
+  --logo: #9cc58d;
+  --heat-0: #2a2a2a;
+  --heat-1: #22301f;
+  --heat-2: #33512c;
+  --heat-3: #4f7a44;
+  --heat-4: #82b673;
+  --positive: #8fbf7f;
+  --negative: #ef6b6b;
+  --warning: #e0a44a;
+  --pill-positive-bg: #172a1d;
+  --pill-positive-ink: #5fd38f;
+  --pill-negative-bg: #2c1a1a;
+  --pill-negative-ink: #f08a8a;
+  --pill-warning-bg: #2a2214;
+  --pill-warning-ink: #e9b765;
+  --pill-neutral-bg: #222222;
+  --pill-neutral-ink: #c9c9c6;
+  --pill-progress-bg: #1f2b1d;
+  --pill-progress-ink: #a6cf98;
+
+  --habit-teal: #36a597;
+  --habit-ink: #d6d6d2;
+  --habit-moss: #93b863;
+  --habit-clay: #dd8a63;
+  --habit-slate: #8fa6bd;
+  --habit-rose: #e07d99;
+  --habit-ochre: #d6a845;
+  --habit-sky: #6aaee0;
+
+  --card: var(--surface);
+  --popover: #1a1a1a;
+  --popover-foreground: var(--foreground);
+  --primary: #f2f2f0;
+  --primary-foreground: #111111;
+  --secondary: #222222;
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface);
+  --accent: #222222;
+  --accent-foreground: var(--foreground);
+  --ring: #6b9e5c;
+  --chart-2: #f2f2f0;
+  --chart-3: #8a8a8a;
+  --chart-4: #4a4a4a;
+  --chart-5: #2b2b2b;
+  --grid: #262626;
+
+  --sidebar-accent: #1c1c1c;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+  body {
+    @apply bg-chrome text-foreground antialiased;
+    /* 16px on phones, where small text is hardest to read; the denser 14px from tablet width up. */
+    font-size: 16px;
+    line-height: 24px;
+    @media (width >= 40rem) {
+      font-size: 14px;
+      line-height: 20px;
+    }
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+  /* Edge draws its own eye icon; the password fields have one already. */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}
+
+
+/*
+  Motion. Everything here moves the way Ascend's data moves: things rise, bars fill, stones are
+  set down. Each plays once. Reduced-motion settings switch it all off (see the rule above).
+  Keyframes only state where a thing starts; it ends wherever its own styles put it.
+*/
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate(var(--x, 0), var(--y, 0.35em));
+  }
+}
+@keyframes zoom-rise {
+  from {
+    opacity: 0;
+    transform: translateY(48px) scale(0.96);
+  }
+}
+@keyframes wipe {
+  from {
+    clip-path: inset(0 100% 0 0 round 14px);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 14px);
+  }
+}
+@keyframes fill-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes grow-width {
+  from {
+    width: 0;
+  }
+}
+@keyframes slide-knob {
+  from {
+    left: 14px;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+@keyframes set-stone {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+:root {
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-settle: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* On page load: no script needed, so it plays on first paint. */
+.anim-rise {
+  animation: rise 900ms var(--ease-out) var(--d, 0ms) backwards;
+}
+.anim-grow {
+  animation: grow-width 1200ms var(--ease-out) var(--d, 0ms) backwards;
+}
+.anim-knob {
+  animation: slide-knob 1200ms var(--ease-out) var(--d, 0ms) backwards;
+}
+/* The cairn: stones set down one at a time, bottom first. */
+[data-animated] .mark-stone {
+  animation: set-stone 560ms var(--ease-settle) backwards;
+}
+[data-animated] .mark-stone:nth-child(2) {
+  animation-delay: 160ms;
+}
+[data-animated] .mark-stone:nth-child(3) {
+  animation-delay: 320ms;
+}
+
+/*
+  On scroll: <InView> marks a block "waiting" only when it starts below the screen, and "shown"
+  once it scrolls in. Waiting holds each animation on its first frame; blocks already on screen,
+  or seen without JavaScript, are never hidden.
+*/
+:is([data-inview="waiting"], [data-inview="shown"]) {
+  .iv-rise {
+    --y: 32px;
+    animation: rise 900ms var(--ease-out) var(--d, 0ms) backwards;
+  }
+  .iv-zoom {
+    animation: zoom-rise 1100ms var(--ease-out) var(--d, 0ms) backwards;
+  }
+  .iv-wipe {
+    animation: wipe 900ms var(--ease-out) var(--d, 0ms) backwards;
+  }
+  .iv-fill {
+    transform-origin: left;
+    animation: fill-x 1100ms var(--ease-out) var(--d, 300ms) backwards;
+  }
+  .iv-pop {
+    animation: pop 500ms var(--ease-settle) var(--d, 0ms) backwards;
+  }
+}
+[data-inview="waiting"] :is(.iv-rise, .iv-zoom, .iv-wipe, .iv-fill, .iv-pop) {
+  animation-play-state: paused;
+}
+
+/* Welcome tour: each step slides in; the sample bar fills. */
+.tour-step {
+  --x: 16px;
+  --y: 0;
+  animation: rise 450ms var(--ease-out) backwards;
+}
+.tour-fill {
+  transform-origin: left;
+  animation: fill-x 1000ms var(--ease-out) 250ms backwards;
+}
