@@ -1,0 +1,278 @@
+// Ascend database schema. Policy notes live in docs/ARCHITECTURE.md.
+// Every user-owned row carries userId so ownership is checked with one indexed predicate.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled (Supabase transaction pooler)
+  directUrl = env("DIRECT_URL") // direct, used by migrations
+}
+
+// ---------- Auth (Better Auth + username plugin) ----------
+
+model User {
+  id              String   @id
+  name            String
+  email           String   @unique // stored lowercase; accounts from before emails were collected hold a reserved @users.ascend.invalid address
+  emailVerified   Boolean  @default(false)
+  image           String?
+  username        String?  @unique // stored normalised (lowercase); uniqueness is enforced here
+  displayUsername String?
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  sessions     Session[]
+  accounts     Account[]
+  preference   UserPreference?
+  categories   Category[]
+  habits       Habit[]
+  habitLogs    HabitLog[]
+  subHabitLogs SubHabitLog[]
+  dailyReviews DailyReview[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime @db.Timestamptz(3)
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(3)
+  scope                 String?
+  password              String? // hash produced by Better Auth (scrypt); never plaintext
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// Fixed-window attempt counter for sensitive actions (sign-in, sign-up, password change).
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt // epoch ms of the window start
+
+  @@map("rate_limit")
+}
+
+// ---------- Preferences ----------
+
+model UserPreference {
+  userId               String    @id
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timezone             String    @default("UTC") // IANA name; defines the user's "today"
+  weekStartsOn         Int       @default(1) // 0 = Sunday, 1 = Monday
+  theme                String    @default("system")
+  gamificationEnabled  Boolean   @default(true)
+  journalEnabled       Boolean   @default(true)
+  hideCompleted        Boolean   @default(false)
+  reviewReminderTime   String? // "HH:mm" local time
+  tourDoneAt           DateTime? @db.Timestamptz(3) // set when the welcome tour is finished or skipped
+  monthlyReport        Boolean   @default(false) // opted in to the monthly report email
+  monthlyReportSentFor String? // "YYYY-MM" of the last month reported, so a month is never sent twice
+  updatedAt            DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@map("user_preference")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  habits    Habit[]
+
+  @@unique([userId, name])
+  @@map("category")
+}
+
+// ---------- Habits ----------
+
+enum Frequency {
+  DAILY // every day
+  WEEKDAYS // selected weekdays (weekends-only is weekdays [0, 6])
+  INTERVAL // every N days counted from the version's effectiveFrom
+  WEEKLY // N units per week, any day
+  MONTHLY // N units per month, any day
+}
+
+enum TargetType {
+  CHECKBOX
+  DURATION // stored in minutes
+  COUNT
+  QUANTITY
+}
+
+model Habit {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  icon            String? // lucide icon name from a fixed allow-list
+  color           String? // design-system palette key, not a free hex
+  startDate       DateTime  @db.Date
+  endDate         DateTime? @db.Date
+  reminderEnabled Boolean   @default(false)
+  reminderTime    String? // "HH:mm" local time
+  sortOrder       Int       @default(0)
+  // Set while archived; occurrences on or after this day are not scheduled.
+  archivedOn      DateTime? @db.Date
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+
+  schedules    HabitSchedule[]
+  subHabits    SubHabit[]
+  logs         HabitLog[]
+  subHabitLogs SubHabitLog[]
+
+  @@index([userId, archivedOn])
+  @@index([categoryId])
+  @@map("habit")
+}
+
+// A schedule version. Editing the schedule or target inserts a version effective from the
+// edit day, so earlier days keep being evaluated by the rules that applied to them.
+// Pausing is a version with paused = true.
+model HabitSchedule {
+  id               String     @id @default(cuid())
+  habitId          String
+  habit            Habit      @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  effectiveFrom    DateTime   @db.Date
+  frequency        Frequency
+  weekdays         Int[] // 0 = Sunday … 6 = Saturday (WEEKDAYS only)
+  intervalDays     Int? // INTERVAL only
+  timesPerDay      Int        @default(1) // DAILY / WEEKDAYS / INTERVAL
+  targetType       TargetType
+  // Per occurrence for DAILY/WEEKDAYS/INTERVAL; per period for WEEKLY/MONTHLY
+  // (for a CHECKBOX period target this is the number of sessions).
+  targetValue      Float
+  targetUnit       String?
+  paused           Boolean    @default(false)
+  // When true and required sub-habits are active, an occurrence is complete only when every
+  // required sub-habit meets its target. When false, sub-habits are a checklist and the
+  // habit is completed through its own value. Versioned so a change never rewrites history.
+  requireSubHabits Boolean    @default(true)
+  createdAt        DateTime   @default(now()) @db.Timestamptz(3)
+
+  @@unique([habitId, effectiveFrom])
+  @@map("habit_schedule")
+}
+
+model SubHabit {
+  id          String     @id @default(cuid())
+  habitId     String
+  habit       Habit      @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  name        String
+  targetType  TargetType
+  targetValue Float
+  targetUnit  String?
+  required    Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  activeFrom  DateTime   @db.Date // applies to occurrences on or after this day
+  archivedOn  DateTime?  @db.Date // removed from this day on; history keeps it
+  createdAt   DateTime   @default(now()) @db.Timestamptz(3)
+
+  logs SubHabitLog[]
+
+  @@index([habitId])
+  @@map("sub_habit")
+}
+
+// One row per scheduled occurrence that has any recorded progress.
+model HabitLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitId    String
+  habit      Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date // the user's local calendar day
+  occurrence Int      @default(0) // 0-based index when a habit occurs several times a day
+  value      Float    @default(0) // actual recorded value; never capped
+  note       String?
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([habitId, date, occurrence])
+  @@index([userId, date])
+  @@map("habit_log")
+}
+
+model SubHabitLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitId    String
+  habit      Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  subHabitId String
+  subHabit   SubHabit @relation(fields: [subHabitId], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date
+  occurrence Int      @default(0)
+  value      Float    @default(0)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([subHabitId, date, occurrence])
+  @@index([userId, date])
+  @@index([habitId, date])
+  @@map("sub_habit_log")
+}
+
+// ---------- Reviews ----------
+
+model DailyReview {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         DateTime @db.Date
+  reflection   String?
+  mood         Int? // 1–5
+  energy       Int? // 1–5
+  sleepQuality Int? // 1–5
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([userId, date])
+  @@map("daily_review")
+}
