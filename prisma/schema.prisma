@@ -24,14 +24,17 @@ model User {
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @db.Timestamptz(3)
 
-  sessions     Session[]
-  accounts     Account[]
-  preference   UserPreference?
-  categories   Category[]
-  habits       Habit[]
-  habitLogs    HabitLog[]
-  subHabitLogs SubHabitLog[]
-  dailyReviews DailyReview[]
+  sessions        Session[]
+  accounts        Account[]
+  preference      UserPreference?
+  categories      Category[]
+  habits          Habit[]
+  habitLogs       HabitLog[]
+  subHabitLogs    SubHabitLog[]
+  dailyReviews    DailyReview[]
+  customExercises CustomExercise[]
+  workouts        Workout[]
+  workoutSets     WorkoutSet[]
 
   @@map("user")
 }
@@ -275,4 +278,51 @@ model DailyReview {
 
   @@unique([userId, date])
   @@map("daily_review")
+}
+
+// ---------- Workouts ----------
+
+// An exercise a user added that is not in the built-in list (src/lib/exercises.ts).
+model CustomExercise {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  group     String   @default("Other")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([userId, name])
+  @@map("custom_exercise")
+}
+
+// One workout per user per calendar day; its sets hang off it.
+model Workout {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime     @db.Date // the user's local calendar day
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime     @updatedAt @db.Timestamptz(3)
+  sets      WorkoutSet[]
+
+  @@unique([userId, date])
+  @@map("workout")
+}
+
+model WorkoutSet {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutId    String
+  workout      Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise     String // built-in key, or "custom:<CustomExercise id>"
+  exerciseName String // name at the time, so history survives renames and deletions
+  reps         Int
+  weightKg     Float // 0 for bodyweight
+  position     Int      @default(0)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([workoutId])
+  @@index([userId, exercise])
+  @@map("workout_set")
 }
