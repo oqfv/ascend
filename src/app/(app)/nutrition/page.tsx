@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Coffee, Cookie, Moon, Sun } from "lucide-react";
 import { Page } from "@/components/page-header";
 import { DateNav } from "@/components/date-nav";
@@ -24,11 +26,13 @@ const MEALS = [
 
 const g = (v: number) => `${Math.round(v)} g`;
 
-export default async function NutritionPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+export default async function NutritionPage({ searchParams }: { searchParams: Promise<{ date?: string; welcome?: string }> }) {
   const user = await requireUser();
-  const { date: raw } = await searchParams;
+  const { date: raw, welcome } = await searchParams;
   const date = raw && isISODate(raw) && raw <= user.today ? raw : user.today;
   const [profile, entries, recent] = await Promise.all([loadNutritionProfile(user.id), loadFoodDay(user.id, date), loadRecentFoods(user.id)]);
+  // First visit with no targets: start with the welcome, unless they chose to skip it.
+  if (!profile && !(await cookies()).get("nutrition_welcome_skipped")) redirect("/nutrition/welcome");
   const total = sumMacros(entries);
   const bars = [
     { label: "Calories", value: total.calories, target: profile?.calorieTarget, unit: "kcal", big: true },
@@ -50,15 +54,21 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <LinkButton variant="outline" href="/nutrition/targets">{profile ? "Targets" : "Set targets"}</LinkButton>
+          <LinkButton variant="outline" href={profile ? "/nutrition/targets" : "/nutrition/welcome"}>{profile ? "Calorie calculator" : "Work out my numbers"}</LinkButton>
           <DateNav date={date} today={user.today} basePath="/nutrition" />
         </div>
       </div>
 
+      {welcome === "done" && profile && (
+        <p role="status" className="mt-6 rounded-xl bg-data-soft px-4 py-3">
+          You&apos;re all set. Add your first meal below: tap <span className="font-medium">Add food</span> under any meal.
+        </p>
+      )}
+
       {!profile && (
         <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-data-soft px-4 py-3">
           <span>Set your daily calorie and protein targets to see what&apos;s left each day.</span>
-          <Link href="/nutrition/targets" className="font-medium underline underline-offset-4">Set targets</Link>
+          <Link href="/nutrition/welcome" className="font-medium underline underline-offset-4">Work out my numbers</Link>
         </p>
       )}
 

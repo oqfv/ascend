@@ -7,7 +7,7 @@ import { loadNutritionProfile } from "@/lib/data/nutrition";
 import type { Activity, Goal, Sex } from "@/lib/domain/nutrition";
 import { requireUser } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Nutrition targets" };
+export const metadata: Metadata = { title: "Calorie calculator" };
 
 export default async function TargetsPage() {
   const user = await requireUser();
@@ -17,7 +17,7 @@ export default async function TargetsPage() {
       <LinkButton variant="ghost" href="/nutrition" className="-ml-3 mb-2">
         <ChevronLeft /> Nutrition
       </LinkButton>
-      <PageHeader title="Daily targets" description="Ascend suggests calories and macros from your details. Only you can see them." />
+      <PageHeader title="Calorie calculator" description="Change your details and Ascend works out new daily targets. Only you can see them." />
       <div className="mt-6">
         <TargetsForm
           year={Number(user.today.slice(0, 4))}

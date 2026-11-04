@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { isISODate, toDbDate } from "@/lib/domain/dates";
@@ -8,6 +9,13 @@ import { ageIn, portion, suggestTargets } from "@/lib/domain/nutrition";
 import { searchFoods, type FoodResult } from "@/lib/food-search";
 import { allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
+
+const WELCOME_SKIPPED = "nutrition_welcome_skipped";
+
+export async function skipNutritionWelcome() {
+  await requireUser();
+  (await cookies()).set(WELCOME_SKIPPED, "1", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 365 });
+}
 
 export type FoodSearchResult = { ok: true; results: FoodResult[]; partial: boolean } | { ok: false; error: string };
 
