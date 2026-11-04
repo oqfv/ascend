@@ -24,17 +24,19 @@ model User {
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @db.Timestamptz(3)
 
-  sessions        Session[]
-  accounts        Account[]
-  preference      UserPreference?
-  categories      Category[]
-  habits          Habit[]
-  habitLogs       HabitLog[]
-  subHabitLogs    SubHabitLog[]
-  dailyReviews    DailyReview[]
-  customExercises CustomExercise[]
-  workouts        Workout[]
-  workoutSets     WorkoutSet[]
+  sessions          Session[]
+  accounts          Account[]
+  preference        UserPreference?
+  categories        Category[]
+  habits            Habit[]
+  habitLogs         HabitLog[]
+  subHabitLogs      SubHabitLog[]
+  dailyReviews      DailyReview[]
+  customExercises   CustomExercise[]
+  workouts          Workout[]
+  workoutSets       WorkoutSet[]
+  nutritionProfiles NutritionProfile[]
+  foodEntries       FoodEntry[]
 
   @@map("user")
 }
@@ -325,4 +327,59 @@ model WorkoutSet {
   @@index([workoutId])
   @@index([userId, exercise])
   @@map("workout_set")
+}
+
+// ---------- Nutrition ----------
+
+// The body details behind the daily targets, and the targets themselves (suggested, then editable).
+model NutritionProfile {
+  userId        String   @id
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sex           String // "male" | "female": the formula needs one of the two
+  birthYear     Int
+  heightCm      Float
+  weightKg      Float
+  activity      String // sedentary | light | moderate | active | very
+  goal          String // lose | keep | gain
+  calorieTarget Int
+  proteinTarget Int
+  carbsTarget   Int
+  fatTarget     Int
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("nutrition_profile")
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+// One food eaten in one meal. Totals are stored; per-100 g values are kept when known so the food can be re-added at another size.
+model FoodEntry {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime @db.Date
+  meal           MealType
+  name           String
+  brand          String?
+  grams          Float?
+  calories       Float
+  protein        Float
+  carbs          Float
+  fat            Float
+  per100Calories Float?
+  per100Protein  Float?
+  per100Carbs    Float?
+  per100Fat      Float?
+  source         String // off | usda | manual | gemini
+  sourceId       String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, date])
+  @@index([userId, createdAt])
+  @@map("food_entry")
 }

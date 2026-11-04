@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, CalendarDays, CheckCircle2, Dumbbell, ListChecks, NotebookPen, Settings } from "lucide-react";
+import { Apple, BarChart3, CalendarDays, CheckCircle2, Dumbbell, ListChecks, NotebookPen, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Destinations that exist today. Routines, goals and achievements join this list when they ship.
@@ -13,6 +13,7 @@ export const NAV = [
   { href: "/reviews", label: "Reviews", icon: NotebookPen },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/workouts", label: "Workouts", icon: Dumbbell },
+  { href: "/nutrition", label: "Nutrition", icon: Apple },
 ] as const;
 
 export const SETTINGS = { href: "/settings", label: "Settings", icon: Settings } as const;

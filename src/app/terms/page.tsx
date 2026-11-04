@@ -63,10 +63,10 @@ const SECTIONS: LegalSection[] = [
     ),
   },
   {
-    title: "Reviews and insights aren't advice",
+    title: "Reviews, insights and targets aren't advice",
     body: (
       <p>
-        Ascend&apos;s reviews and insights are calculated from the numbers you enter. They are not medical, health or professional advice.
+        Ascend&apos;s reviews, insights, and calorie and protein targets are calculated from the numbers you enter. They are not medical, health or professional advice.
         Talk to a qualified person about anything that affects your health.
       </p>
     ),
