@@ -5,7 +5,8 @@ import { Page, PageHeader } from "@/components/page-header";
 import { LinkButton } from "@/components/link-button";
 import { ChartFrame } from "@/components/charts/chart-frame";
 import { ExerciseChart } from "@/components/workouts/exercise-chart";
-import { exerciseName, loadSetHistory } from "@/lib/data/workouts";
+import { ExerciseIcon } from "@/components/workouts/exercise-icon";
+import { exerciseName, loadExerciseOptions, loadSetHistory } from "@/lib/data/workouts";
 import { personalBests, sessionsOf } from "@/lib/domain/workouts";
 import { formatDay, plural } from "@/lib/format";
 import { requireUser } from "@/lib/session";
@@ -21,7 +22,8 @@ export default async function ExercisePage({ params }: { params: Promise<{ exerc
   const name = await exerciseName(user.id, key);
   if (!name) notFound();
 
-  const sets = await loadSetHistory(user.id, [key]);
+  const [sets, options] = await Promise.all([loadSetHistory(user.id, [key]), loadExerciseOptions(user.id)]);
+  const group = options.find((o) => o.key === key)?.group ?? "Other";
   const sessions = sessionsOf(sets);
   const pb = personalBests(sets);
   const bodyweight = sets.length > 0 && pb.heaviestKg === 0;
@@ -31,7 +33,7 @@ export default async function ExercisePage({ params }: { params: Promise<{ exerc
       <LinkButton variant="ghost" href="/workouts" className="-ml-3 mb-2">
         <ChevronLeft /> Workouts
       </LinkButton>
-      <PageHeader title={name} description={sets.length ? `${plural(pb.sessions, "session")} logged.` : "No sets logged yet. Add one from Workouts."} />
+      <PageHeader title={<span className="flex items-center gap-3"><ExerciseIcon group={group} size="lg" />{name}</span>} description={sets.length ? `${plural(pb.sessions, "session")} logged.` : "No sets logged yet. Add one from Workouts."} />
 
       {sets.length > 0 && (
         <>

@@ -10,6 +10,7 @@ import { NativeSelect } from "@/components/controls";
 import { addCustomExercise, addSet } from "@/app/(app)/workouts/actions";
 import type { ExerciseOption } from "@/lib/data/workouts";
 import { EXERCISE_GROUPS } from "@/lib/exercises";
+import { ExerciseIcon } from "./exercise-icon";
 import type { ISODate } from "@/lib/domain/dates";
 
 const NEW = "__new__";
@@ -23,6 +24,7 @@ export function SetForm({ date, options }: { date: ISODate; options: ExerciseOpt
   const [newGroup, setNewGroup] = useState<string>("Other");
   const [pending, start] = useTransition();
   const groups = [...new Set(options.map((o) => o.group))];
+  const chosen = options.find((o) => o.key === exercise);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,7 +52,9 @@ export function SetForm({ date, options }: { date: ISODate; options: ExerciseOpt
       <form onSubmit={submit} className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_110px_130px_auto] sm:items-end">
         <Field label="Exercise">
           {(p) => (
-            <NativeSelect {...p} value={exercise} onChange={(e) => setExercise(e.target.value)}>
+            <div className="flex items-center gap-3">
+            <ExerciseIcon group={chosen?.group ?? (exercise === NEW ? newGroup : "Other")} />
+            <NativeSelect {...p} className="min-w-0 flex-1" value={exercise} onChange={(e) => setExercise(e.target.value)}>
               {groups.map((g) => (
                 <optgroup key={g} label={g}>
                   {options
@@ -64,20 +68,22 @@ export function SetForm({ date, options }: { date: ISODate; options: ExerciseOpt
               ))}
               <option value={NEW}>Add your own exercise…</option>
             </NativeSelect>
+            </div>
           )}
         </Field>
         {exercise !== NEW && (
           <>
             <Field label="Reps">{(p) => <Input {...p} inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} className="num" />}</Field>
-            <Field label="Weight (kg)" hint="0 for bodyweight">
+            <Field label="Weight (kg)">
               {(p) => <Input {...p} inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} className="num" />}
             </Field>
-            <Button type="submit" disabled={pending} className="sm:mb-[22px]">
+            <Button type="submit" disabled={pending}>
               <Plus /> {pending ? "Adding…" : "Add set"}
             </Button>
           </>
         )}
       </form>
+      {exercise !== NEW && <p className="-mt-1 text-sm text-muted-foreground">Use 0 kg for bodyweight exercises like push-ups.</p>}
       {exercise === NEW && (
         <form onSubmit={createExercise} className="grid gap-4 rounded-xl bg-background p-4 sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-end">
           <Field label="Exercise name">{(p) => <Input {...p} value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={60} autoFocus />}</Field>

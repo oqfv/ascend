@@ -5,6 +5,7 @@ import { DateNav } from "@/components/date-nav";
 import { StatusPill } from "@/components/status-pill";
 import { SetForm } from "@/components/workouts/set-form";
 import { DeleteSetButton } from "@/components/workouts/delete-set-button";
+import { ExerciseIcon } from "@/components/workouts/exercise-icon";
 import { loadExerciseOptions, loadRecentWorkouts, loadSetHistory, loadWorkoutDay } from "@/lib/data/workouts";
 import { isISODate } from "@/lib/domain/dates";
 import { isPersonalBest } from "@/lib/domain/workouts";
@@ -30,6 +31,7 @@ export default async function WorkoutsPage({ searchParams }: { searchParams: Pro
     else groups.push({ exercise: s.exercise, name: s.exerciseName, sets: [s] });
   }
   const volume = sets.reduce((a, s) => a + s.weightKg * s.reps, 0);
+  const groupOf = (key: string) => options.find((o) => o.key === key)?.group ?? "Other";
 
   return (
     <Page>
@@ -54,7 +56,10 @@ export default async function WorkoutsPage({ searchParams }: { searchParams: Pro
           {groups.map((g) => (
             <div key={g.exercise} className="rounded-2xl bg-surface p-2 sm:p-3">
               <div className="flex items-center justify-between gap-3 px-3 pt-2 pb-2">
-                <h3 className="font-medium">{g.name}</h3>
+                <div className="flex min-w-0 items-center gap-3">
+                  <ExerciseIcon group={groupOf(g.exercise)} size="sm" />
+                  <h3 className="font-medium">{g.name}</h3>
+                </div>
                 <Link href={`/workouts/${encodeURIComponent(g.exercise)}`} className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
                   Progress
                 </Link>
