@@ -4,7 +4,7 @@ import { getSessionCookie } from "better-auth/cookies";
 // A fast redirect for visitors with no session cookie on the app's private pages. This is not the
 // security check: every page and action re-validates the session on the server through requireUser().
 // Only the private routes are guarded, so unknown addresses fall through to a real 404.
-const PRIVATE = ["/today", "/habits", "/calendar", "/reviews", "/analytics", "/workouts", "/nutrition", "/settings"];
+const PRIVATE = ["/today", "/habits", "/calendar", "/reviews", "/analytics", "/nutrition", "/settings"];
 const AUTH_PAGES = ["/login", "/register"];
 
 export function middleware(req: NextRequest) {
@@ -18,5 +18,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/today/:path*", "/habits/:path*", "/calendar/:path*", "/reviews/:path*", "/analytics/:path*", "/workouts/:path*", "/nutrition/:path*", "/settings/:path*", "/login", "/register"],
+  matcher: ["/today/:path*", "/habits/:path*", "/calendar/:path*", "/reviews/:path*", "/analytics/:path*", "/nutrition/:path*", "/settings/:path*", "/login", "/register"],
 };
