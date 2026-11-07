@@ -12,6 +12,7 @@ import { portion, type Macros } from "@/lib/domain/nutrition";
 import type { FoodResult } from "@/lib/food-search";
 import type { RecentFood } from "@/lib/data/nutrition";
 import type { ISODate } from "@/lib/domain/dates";
+import { DescribeMeal } from "./describe-meal";
 
 type Meal = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
 type Picked = { name: string; brand: string | null; source: "off" | "usda" | "manual"; sourceId: string | null; per100: Macros };
@@ -22,7 +23,7 @@ const n = (s: string) => Number(s.replace(",", "."));
 /** Add a food to one meal: search the databases, re-add a recent food, or type it in. */
 export function AddFood({ date, meal, mealLabel, recent }: { date: ISODate; meal: Meal; mealLabel: string; recent: RecentFood[] }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"search" | "manual">("search");
+  const [tab, setTab] = useState<"search" | "describe" | "manual">("search");
   const [q, setQ] = useState("");
   const [results, setResults] = useState<FoodResult[] | null>(null);
   const [picked, setPicked] = useState<Picked | null>(null);
@@ -75,7 +76,7 @@ export function AddFood({ date, meal, mealLabel, recent }: { date: ISODate; meal
   return (
     <div className="grid gap-4 rounded-xl bg-background p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Segmented label="How to add" value={tab} onChange={(t) => { setTab(t); setPicked(null); }} options={[{ value: "search", label: "Search" }, { value: "manual", label: "Type it in" }]} />
+        <Segmented label="How to add" value={tab} onChange={(t) => { setTab(t); setPicked(null); }} options={[{ value: "search", label: "Search" }, { value: "describe", label: "Describe it" }, { value: "manual", label: "Type it in" }]} />
         <Button variant="ghost" onClick={() => { reset(); setOpen(false); }}>Cancel</Button>
       </div>
 
@@ -133,6 +134,8 @@ export function AddFood({ date, meal, mealLabel, recent }: { date: ISODate; meal
           </div>
         </form>
       )}
+
+      {tab === "describe" && <DescribeMeal date={date} meal={meal} mealLabel={mealLabel} onDone={() => { reset(); setOpen(false); }} />}
 
       {tab === "manual" && (
         <form onSubmit={addManual} className="grid gap-4">

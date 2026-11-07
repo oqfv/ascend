@@ -37,6 +37,8 @@ model User {
   workoutSets       WorkoutSet[]
   nutritionProfiles NutritionProfile[]
   foodEntries       FoodEntry[]
+  waterLogs         WaterLog[]
+  bodyWeights       BodyWeight[]
 
   @@map("user")
 }
@@ -345,6 +347,7 @@ model NutritionProfile {
   proteinTarget Int
   carbsTarget   Int
   fatTarget     Int
+  waterTargetMl Int? // null: worked out from body weight
   updatedAt     DateTime @updatedAt @db.Timestamptz(3)
 
   @@map("nutrition_profile")
@@ -375,11 +378,35 @@ model FoodEntry {
   per100Protein  Float?
   per100Carbs    Float?
   per100Fat      Float?
-  source         String // off | usda | manual | gemini
+  source         String // off | usda | manual | gemini | ninjas
   sourceId       String?
   createdAt      DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([userId, date])
   @@index([userId, createdAt])
   @@map("food_entry")
+}
+
+// One water total per user per day, in millilitres.
+model WaterLog {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  ml        Int      @default(0)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@id([userId, date])
+  @@map("water_log")
+}
+
+// One body-weight reading per user per day.
+model BodyWeight {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  kg        Float
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@id([userId, date])
+  @@map("body_weight")
 }

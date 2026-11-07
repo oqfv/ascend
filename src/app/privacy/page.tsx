@@ -26,7 +26,7 @@ const SECTIONS: LegalSection[] = [
         <li>A password reset code, only while one is waiting to be used, also stored as a hash. It stops working after 10 minutes.</li>
         <li>Your habits, the progress you record, and your optional journal: mood, energy, sleep and notes.</li>
         <li>
-          If you use Workouts or Nutrition: the exercises, sets and meals you log, and the details you enter for your targets (sex, birth
+          If you use Workouts or Nutrition: the exercises, sets, meals, water and body weight you log, and the details you enter for your targets (sex, birth
           year, height, weight, activity level and goal). These are health details, so they get the same protection as everything else.
         </li>
         <li>
@@ -76,7 +76,7 @@ const SECTIONS: LegalSection[] = [
           </li>
         </ul>
         <p>
-          Food search asks Open Food Facts and USDA FoodData Central for nutrition values. They receive only the words you search for,
+          Food search asks Open Food Facts and USDA FoodData Central for nutrition values, and Describe it asks CalorieNinjas. They receive only the words you type,
           never your name, email or account.
         </p>
         <p>All connections are encrypted. Fonts are served from Ascend itself, so loading a page doesn&apos;t contact any other company.</p>

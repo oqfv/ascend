@@ -11,6 +11,16 @@ export async function loadFoodDay(userId: string, date: ISODate) {
   return db.foodEntry.findMany({ where: { userId, date: toDbDate(date) }, orderBy: { createdAt: "asc" } });
 }
 
+export async function loadWater(userId: string, date: ISODate) {
+  return (await db.waterLog.findUnique({ where: { userId_date: { userId, date: toDbDate(date) } } }))?.ml ?? 0;
+}
+
+/** Recent weigh-ins, newest first. */
+export async function loadWeights(userId: string, limit = 60) {
+  const rows = await db.bodyWeight.findMany({ where: { userId }, orderBy: { date: "desc" }, take: limit });
+  return rows.map((r) => ({ date: r.date.toISOString().slice(0, 10), kg: r.kg }));
+}
+
 export type RecentFood = { name: string; brand: string | null; source: string; sourceId: string | null; per100: Macros | null; totals: Macros; grams: number | null };
 
 /** The user's most recent distinct foods, for one-tap re-adding. */

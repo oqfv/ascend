@@ -8,9 +8,10 @@ import { DateNav } from "@/components/date-nav";
 import { LinkButton } from "@/components/link-button";
 import { AddFood } from "@/components/nutrition/add-food";
 import { DeleteFoodButton } from "@/components/nutrition/delete-food-button";
-import { loadFoodDay, loadNutritionProfile, loadRecentFoods } from "@/lib/data/nutrition";
+import { WaterCard, WeightCard } from "@/components/nutrition/water-weight";
+import { loadFoodDay, loadNutritionProfile, loadRecentFoods, loadWater, loadWeights } from "@/lib/data/nutrition";
 import { isISODate } from "@/lib/domain/dates";
-import { share, sumMacros } from "@/lib/domain/nutrition";
+import { share, sumMacros, waterTarget } from "@/lib/domain/nutrition";
 import { formatDay } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,13 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
   const user = await requireUser();
   const { date: raw, welcome } = await searchParams;
   const date = raw && isISODate(raw) && raw <= user.today ? raw : user.today;
-  const [profile, entries, recent] = await Promise.all([loadNutritionProfile(user.id), loadFoodDay(user.id, date), loadRecentFoods(user.id)]);
+  const [profile, entries, recent, water, weights] = await Promise.all([
+    loadNutritionProfile(user.id),
+    loadFoodDay(user.id, date),
+    loadRecentFoods(user.id),
+    loadWater(user.id, date),
+    loadWeights(user.id, 30),
+  ]);
   // First visit with no targets: start with the welcome, unless they chose to skip it.
   if (!profile && !(await cookies()).get("nutrition_welcome_skipped")) redirect("/nutrition/welcome");
   const total = sumMacros(entries);
@@ -93,6 +100,11 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
           );
         })}
       </section>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <WaterCard date={date} ml={water} target={waterTarget(profile?.waterTargetMl, profile?.weightKg ?? weights[0]?.kg)} />
+        <WeightCard key={date} date={date} today={user.today} latest={weights} />
+      </div>
 
       <div className="mt-4 grid gap-3">
         {MEALS.map((m) => {

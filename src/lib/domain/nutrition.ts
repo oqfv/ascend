@@ -93,6 +93,13 @@ export function portion(per100: Macros, grams: number): Macros {
   return { calories: Math.round(per100.calories * k), protein: r(per100.protein), carbs: r(per100.carbs), fat: r(per100.fat) };
 }
 
+/** Daily water goal: the user's own, or about 35 ml per kg of body weight, rounded to a glass (250 ml). */
+export function waterTarget(own: number | null | undefined, weightKg: number | null | undefined): number {
+  if (own) return own;
+  if (!weightKg) return 2000;
+  return Math.min(4000, Math.max(1500, Math.round((weightKg * 35) / 250) * 250));
+}
+
 /** Share of a target reached, 0–1, capped; null when there is no target. */
 export function share(value: number, target: number | null | undefined): number | null {
   if (!target || target <= 0) return null;
