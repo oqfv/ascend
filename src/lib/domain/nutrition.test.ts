@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { portion, restingCalories, share, suggestTargets, sumMacros, type Body } from "./nutrition";
+import { onTarget, portion, restingCalories, share, suggestTargets, sumMacros, waterTarget, type Body } from "./nutrition";
 
 const adult: Body = { sex: "male", birthYear: 2000, heightCm: 180, weightKg: 80, activity: "moderate", goal: "keep" };
 
@@ -49,5 +49,30 @@ describe("portion and totals", () => {
     expect(share(60, 120)).toBe(0.5);
     expect(share(200, 120)).toBe(1);
     expect(share(10, null)).toBeNull();
+  });
+});
+
+describe("onTarget", () => {
+  const target = { calories: 2000, protein: 150 };
+  it("needs calories within 10% and the protein reached", () => {
+    expect(onTarget({ calories: 2000, protein: 150 }, target)).toBe(true);
+    expect(onTarget({ calories: 1800, protein: 160 }, target)).toBe(true);
+    expect(onTarget({ calories: 2200, protein: 150 }, target)).toBe(true);
+  });
+  it("misses when calories are too far off or protein is short", () => {
+    expect(onTarget({ calories: 1799, protein: 150 }, target)).toBe(false);
+    expect(onTarget({ calories: 2201, protein: 150 }, target)).toBe(false);
+    expect(onTarget({ calories: 2000, protein: 149 }, target)).toBe(false);
+    expect(onTarget({ calories: 0, protein: 0 }, { calories: 0, protein: 0 })).toBe(false);
+  });
+});
+
+describe("waterTarget", () => {
+  it("uses the user's own goal, else about 35 ml per kg in glasses, within limits", () => {
+    expect(waterTarget(3000, 70)).toBe(3000);
+    expect(waterTarget(null, 72.4)).toBe(2500);
+    expect(waterTarget(null, 30)).toBe(1500);
+    expect(waterTarget(null, 200)).toBe(4000);
+    expect(waterTarget(null, null)).toBe(2000);
   });
 });

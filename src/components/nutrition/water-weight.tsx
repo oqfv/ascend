@@ -21,7 +21,7 @@ export function WaterCard({ date, ml, target }: { date: ISODate; ml: number; tar
     <section aria-labelledby="water-title" className="grid gap-3 rounded-2xl bg-surface p-5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="water-title" className="flex items-center gap-2 font-medium"><GlassWater className="size-4 text-muted-foreground" aria-hidden="true" /> Water</h2>
-        <span className="num">{(ml / 1000).toFixed(2).replace(/0$/, "")} <span className="text-sm text-muted-foreground">/ {(target / 1000).toFixed(1)} L</span></span>
+        <span className="num">{(ml / 1000).toFixed(2).replace(/0$/, "")} <span className="text-sm text-muted-foreground">/ {(target / 1000).toFixed(2).replace(/0$/, "")} L</span></span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-data-track" aria-hidden="true"><div className="h-full rounded-full bg-[var(--habit-sky)]" style={{ width: `${share * 100}%` }} /></div>
       <div className="flex flex-wrap gap-2">

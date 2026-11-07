@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Page, PageHeader } from "@/components/page-header";
 import { HabitForm } from "@/components/habits/habit-form";
@@ -16,6 +17,18 @@ export default async function EditHabitPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const [habit, categories] = await Promise.all([loadHabit(user.id, id), loadCategories(user.id)]);
   if (!habit) notFound();
+
+  if (habit.link) {
+    return (
+      <Page className="max-w-[960px]">
+        <PageHeader title={`Edit ${habit.name}`} description="This habit fills itself in from Nutrition, so its target follows your Nutrition settings." />
+        <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-data-soft px-4 py-3">
+          <span>To change the target, use the calorie calculator. To stop it, turn it off on the Nutrition page.</span>
+          <Link href="/nutrition#linked-habits" className="font-medium underline underline-offset-4">Open Nutrition</Link>
+        </p>
+      </Page>
+    );
+  }
 
   // The form edits what applies from today on (or from the start, if the habit hasn't begun).
   const asOf = maxDate(user.today, habit.startDate);

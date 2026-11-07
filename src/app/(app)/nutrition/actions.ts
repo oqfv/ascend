@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { isISODate, toDbDate } from "@/lib/domain/dates";
+import { fromDbDate, isISODate, toDbDate } from "@/lib/domain/dates";
 import { ageIn, portion, suggestTargets } from "@/lib/domain/nutrition";
 import { searchFoods, type FoodResult } from "@/lib/food-search";
 import { describeMeal as lookUpMeal, type MealItem } from "@/lib/meal-text";
+import { isLinkKey, linkTargets, LINKS, syncLinkedDay, syncLinkedTargets } from "@/lib/linked-habits";
+import { archiveHabit, restoreHabit } from "@/app/(app)/habits/actions";
 import { allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
 
@@ -83,15 +85,18 @@ export async function addFood(raw: unknown): Promise<NutritionResult> {
       sourceId: v.sourceId ?? null,
     },
   });
-  revalidatePath("/nutrition");
+  await syncLinkedDay(user.id, v.date);
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
 export async function deleteFood(id: string): Promise<NutritionResult> {
   const user = await requireUser();
+  const entry = await db.foodEntry.findFirst({ where: { id: String(id), userId: user.id }, select: { date: true } });
   const { count } = await db.foodEntry.deleteMany({ where: { id: String(id), userId: user.id } });
-  if (count === 0) return { ok: false, error: "That food no longer exists." };
-  revalidatePath("/nutrition");
+  if (!entry || count === 0) return { ok: false, error: "That food no longer exists." };
+  await syncLinkedDay(user.id, fromDbDate(entry.date));
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -122,7 +127,9 @@ export async function saveNutritionProfile(raw: unknown): Promise<NutritionResul
   const carbsTarget = Math.max(0, Math.round((calorieTarget - proteinTarget * 4 - fatTarget * 9) / 4));
   const data = { sex: v.sex, birthYear: v.birthYear, heightCm: v.heightCm, weightKg: v.weightKg, activity: v.activity, goal, calorieTarget, proteinTarget, carbsTarget, fatTarget };
   await db.nutritionProfile.upsert({ where: { userId: user.id }, update: data, create: { userId: user.id, ...data } });
-  revalidatePath("/nutrition", "layout");
+  await syncLinkedTargets(user.id, user.today);
+  await syncLinkedDay(user.id, user.today);
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -158,7 +165,8 @@ export async function addWater(date: string, deltaMl: number): Promise<Nutrition
   const current = (await db.waterLog.findUnique({ where: key }))?.ml ?? 0;
   const ml = Math.max(0, Math.min(20000, current + delta));
   await db.waterLog.upsert({ where: key, update: { ml }, create: { userId: user.id, date: toDbDate(d.data), ml } });
-  revalidatePath("/nutrition");
+  await syncLinkedDay(user.id, d.data);
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -173,7 +181,69 @@ export async function logWeight(raw: unknown): Promise<NutritionResult> {
   if (date > user.today) return { ok: false, error: "You can't log weight for a future day." };
   const value = Math.round(kg * 10) / 10;
   await db.bodyWeight.upsert({ where: { userId_date: { userId: user.id, date: toDbDate(date) } }, update: { kg: value }, create: { userId: user.id, date: toDbDate(date), kg: value } });
-  if (date === user.today) await db.nutritionProfile.updateMany({ where: { userId: user.id }, data: { weightKg: value } });
-  revalidatePath("/nutrition", "layout");
+  if (date === user.today) {
+    await db.nutritionProfile.updateMany({ where: { userId: user.id }, data: { weightKg: value } });
+    await syncLinkedTargets(user.id, user.today);
+  }
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Turns a Nutrition-linked habit on (creating or restoring it) or off (archiving it, so its history stays). */
+export async function setLinkedHabit(link: string, on: boolean): Promise<NutritionResult> {
+  const user = await requireUser();
+  if (!isLinkKey(link)) return { ok: false, error: "That habit isn't available." };
+  if (!(await allow(`link-habit:${user.id}`, 30, 10 * 60))) return { ok: false, error: "Too many changes. Wait a few minutes and try again." };
+  const latest = await db.habit.findFirst({ where: { userId: user.id, link }, orderBy: { createdAt: "desc" }, select: { id: true, archivedOn: true } });
+
+  if (!on) {
+    if (latest && !latest.archivedOn) {
+      const res = await archiveHabit(latest.id);
+      if (!res.ok) return { ok: false, error: res.error ?? "Couldn't turn it off." };
+    }
+    revalidatePath("/", "layout");
+    return { ok: true };
+  }
+
+  if (latest && !latest.archivedOn) return { ok: true };
+  const targets = await linkTargets(user.id);
+  const target = targets[link];
+  if (target === null) return { ok: false, error: "Work out your calorie and protein targets first." };
+  if (latest) {
+    const res = await restoreHabit(latest.id);
+    if (!res.ok) return { ok: false, error: res.error ?? "Couldn't turn it on." };
+  } else {
+    const spec = LINKS[link];
+    const [last, health] = await Promise.all([
+      db.habit.aggregate({ where: { userId: user.id }, _max: { sortOrder: true } }),
+      db.category.findFirst({ where: { userId: user.id, name: "Health" }, select: { id: true } }),
+    ]);
+    await db.habit.create({
+      data: {
+        userId: user.id,
+        name: spec.name,
+        icon: spec.icon,
+        color: spec.color,
+        link,
+        categoryId: health?.id ?? null,
+        startDate: toDbDate(user.today),
+        sortOrder: (last._max.sortOrder ?? -1) + 1,
+        schedules: {
+          create: {
+            effectiveFrom: toDbDate(user.today),
+            frequency: "DAILY",
+            weekdays: [],
+            timesPerDay: 1,
+            targetType: spec.targetType,
+            targetValue: target,
+            targetUnit: spec.unit,
+          },
+        },
+      },
+    });
+  }
+  await syncLinkedTargets(user.id, user.today);
+  await syncLinkedDay(user.id, user.today);
+  revalidatePath("/", "layout");
   return { ok: true };
 }

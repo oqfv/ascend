@@ -20,6 +20,7 @@ async function checkDay(userId: string, today: string, habitId: string, date: st
   if (date > today) return { error: "You can't record progress for a future day." } as const;
   const habit = await loadHabit(userId, habitId);
   if (!habit) return { error: "That habit no longer exists." } as const;
+  if (habit.link) return { error: "This habit fills itself in from Nutrition." } as const;
   if (!isLoggableOn(habit, date)) return { error: "This habit isn't scheduled on that day." } as const;
   const v = versionOn(habit, date)!;
   const max = isPeriodic(v.frequency) ? 1 : occurrencesOn(habit, date);

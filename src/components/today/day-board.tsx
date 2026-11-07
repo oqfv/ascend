@@ -3,7 +3,7 @@
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Bell, ChevronDown, Flame } from "lucide-react";
+import { Bell, Check, ChevronDown, Flame } from "lucide-react";
 import type { DayItem, DayView } from "@/lib/data/day";
 import { setHabitValue, setHideCompleted, setSubHabitValue } from "@/app/(app)/today/actions";
 import { formatAmount, formatPercent, formatProgress, plural } from "@/lib/format";
@@ -166,6 +166,8 @@ function scheduleText(item: DayItem): string {
     return `${p.label}: ${amount}`;
   }
   if (item.rule === "subhabits") return `${item.actual} of ${item.target} steps`;
+  if (item.link === "ON_TARGET") return "Calories within 10% and protein reached";
+  if (item.link) return formatProgress(item.actual, item.target, item.targetType, item.unit);
   if (item.targetType === "CHECKBOX") return item.occurrencesToday > 1 ? `Time ${item.occurrence + 1} of ${item.occurrencesToday}` : "Daily check";
   return `Target ${formatAmount(item.target, item.targetType, item.unit)}`;
 }
@@ -193,7 +195,11 @@ function HabitRow({
 
   // Steps decide completion: a ring. A checkbox habit: a check. Anything measured: an amount.
   const lead =
-    item.rule === "subhabits" ? (
+    item.link && item.complete ? (
+      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-data text-white dark:text-[#0b1a18]" aria-hidden="true">
+        <Check className="size-4" strokeWidth={2.5} />
+      </span>
+    ) : item.rule === "subhabits" || item.link ? (
       <span className="grid size-7 shrink-0 place-items-center" aria-hidden="true">
         <ProgressRing progress={item.progress} />
       </span>
@@ -209,7 +215,11 @@ function HabitRow({
         <ProgressRing progress={item.kind === "period" && item.period ? item.period.progress : item.progress} />
       </span>
     );
-  const amount =
+  const amount = item.link ? (
+    <Link href="/nutrition" className="text-sm font-medium underline-offset-4 hover:underline">
+      From Nutrition
+    </Link>
+  ) :
     item.rule === "self" && item.targetType !== "CHECKBOX" ? (
       <AmountInput
         value={item.actual}

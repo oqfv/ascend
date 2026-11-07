@@ -9,6 +9,8 @@ import { LinkButton } from "@/components/link-button";
 import { AddFood } from "@/components/nutrition/add-food";
 import { DeleteFoodButton } from "@/components/nutrition/delete-food-button";
 import { WaterCard, WeightCard } from "@/components/nutrition/water-weight";
+import { LinkedHabits } from "@/components/nutrition/linked-habits";
+import { loadLinkedHabits } from "@/lib/data/habits";
 import { loadFoodDay, loadNutritionProfile, loadRecentFoods, loadWater, loadWeights } from "@/lib/data/nutrition";
 import { isISODate } from "@/lib/domain/dates";
 import { share, sumMacros, waterTarget } from "@/lib/domain/nutrition";
@@ -31,13 +33,15 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
   const user = await requireUser();
   const { date: raw, welcome } = await searchParams;
   const date = raw && isISODate(raw) && raw <= user.today ? raw : user.today;
-  const [profile, entries, recent, water, weights] = await Promise.all([
+  const [profile, entries, recent, water, weights, linked] = await Promise.all([
     loadNutritionProfile(user.id),
     loadFoodDay(user.id, date),
     loadRecentFoods(user.id),
     loadWater(user.id, date),
     loadWeights(user.id, 30),
+    loadLinkedHabits(user.id),
   ]);
+  const isOn = (k: string) => linked.some((h) => h.link === k && !h.archivedOn);
   // First visit with no targets: start with the welcome, unless they chose to skip it.
   if (!profile && !(await cookies()).get("nutrition_welcome_skipped")) redirect("/nutrition/welcome");
   const total = sumMacros(entries);
@@ -144,6 +148,10 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
             </section>
           );
         })}
+      </div>
+
+      <div className="mt-4">
+        <LinkedHabits on={{ WATER: isOn("WATER"), PROTEIN: isOn("PROTEIN"), ON_TARGET: isOn("ON_TARGET") }} hasTargets={!!profile} />
       </div>
     </Page>
   );

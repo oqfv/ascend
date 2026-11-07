@@ -163,6 +163,8 @@ model Habit {
   sortOrder       Int       @default(0)
   // Set while archived; occurrences on or after this day are not scheduled.
   archivedOn      DateTime? @db.Date
+  // WATER | PROTEIN | ON_TARGET: progress fills itself in from Nutrition (src/lib/linked-habits.ts).
+  link            String?
   createdAt       DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
 

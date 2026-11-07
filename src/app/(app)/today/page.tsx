@@ -7,6 +7,9 @@ import { Quote } from "@/components/quote";
 import { QuickAdd } from "@/components/today/quick-add";
 import { WelcomeTour } from "@/components/today/welcome-tour";
 import { loadDay, type DayView } from "@/lib/data/day";
+import { NutritionSummary } from "@/components/today/nutrition-summary";
+import { loadFoodDay, loadNutritionProfile, loadWater, loadWeights } from "@/lib/data/nutrition";
+import { sumMacros, waterTarget } from "@/lib/domain/nutrition";
 import { isISODate, minutesNowIn } from "@/lib/domain/dates";
 import { formatDay, greetingFor, weekdayName } from "@/lib/format";
 import { quoteFor } from "@/lib/quotes";
@@ -38,7 +41,16 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const user = await requireUser();
   const { date: raw } = await searchParams;
   const date = raw && isISODate(raw) ? raw : user.today;
-  const view = await loadDay(user.id, date, user.today, user.prefs.weekStartsOn);
+  const [view, profile, food, water, weights] = await Promise.all([
+    loadDay(user.id, date, user.today, user.prefs.weekStartsOn),
+    loadNutritionProfile(user.id),
+    loadFoodDay(user.id, date),
+    loadWater(user.id, date),
+    loadWeights(user.id, 1),
+  ]);
+  const eaten = sumMacros(food);
+  // Shown once someone uses Nutrition, never on a future day.
+  const showNutrition = date <= user.today && (profile !== null || food.length > 0 || water > 0);
   const isToday = date === user.today;
   const first = user.displayName.split(" ")[0] || user.username;
   const now = minutesNowIn(user.prefs.timezone);
@@ -77,6 +89,17 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         </p>
       )}
       {isToday && <Quote quote={quoteFor(user.today)} className="mt-6 rounded-xl bg-surface px-4 py-3.5" />}
+      {showNutrition && (
+        <NutritionSummary
+          href={date === user.today ? "/nutrition" : `/nutrition?date=${date}`}
+          calories={eaten.calories}
+          calorieTarget={profile?.calorieTarget ?? null}
+          protein={eaten.protein}
+          proteinTarget={profile?.proteinTarget ?? null}
+          waterMl={water}
+          waterTargetMl={waterTarget(profile?.waterTargetMl, profile?.weightKg ?? weights[0]?.kg)}
+        />
+      )}
       {view.hasHabits && (
         <div className="mt-6">
           <QuickAdd startDate={user.today} />

@@ -15,6 +15,7 @@ export interface HabitView extends HabitDef {
   reminderEnabled: boolean;
   reminderTime: string | null;
   sortOrder: number;
+  link: string | null;
 }
 
 const include = {
@@ -40,6 +41,7 @@ function toView(h: HabitRow): HabitView {
     reminderEnabled: h.reminderEnabled,
     reminderTime: h.reminderTime,
     sortOrder: h.sortOrder,
+    link: h.link,
     schedules: h.schedules.map((s) => ({
       effectiveFrom: fromDbDate(s.effectiveFrom),
       frequency: s.frequency,
@@ -79,6 +81,12 @@ export async function loadHabits(userId: string): Promise<HabitView[]> {
 export async function loadHabit(userId: string, habitId: string): Promise<HabitView | null> {
   const row = await db.habit.findFirst({ where: { id: habitId, userId }, include });
   return row ? toView(row) : null;
+}
+
+/** Live and archived habits linked to Nutrition. */
+export async function loadLinkedHabits(userId: string): Promise<HabitView[]> {
+  const rows = await db.habit.findMany({ where: { userId, link: { not: null } }, include });
+  return rows.map(toView);
 }
 
 export async function loadLogs(userId: string, from: ISODate, to: ISODate, habitIds?: string[]) {

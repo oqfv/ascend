@@ -28,6 +28,7 @@ export interface DayItem {
   color: string | null;
   icon: string | null;
   reminderTime: string | null;
+  link: string | null;
   occurrence: number;
   occurrencesToday: number;
   kind: "day" | "period";
@@ -126,6 +127,7 @@ function toItem(
     color: h.color,
     icon: h.icon,
     reminderTime: h.reminderEnabled ? h.reminderTime : null,
+    link: h.link,
     occurrence: o.occurrence,
     occurrencesToday,
     kind,

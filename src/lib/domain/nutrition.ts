@@ -105,3 +105,12 @@ export function share(value: number, target: number | null | undefined): number 
   if (!target || target <= 0) return null;
   return Math.min(1, value / target);
 }
+
+/**
+ * "On target" for a day: calories within 10% of the target either way, and the protein target reached.
+ * A day with nothing logged is never on target.
+ */
+export function onTarget(eaten: { calories: number; protein: number }, target: { calories: number; protein: number }): boolean {
+  if (eaten.calories <= 0 || target.calories <= 0) return false;
+  return Math.abs(eaten.calories - target.calories) <= target.calories * 0.1 && eaten.protein >= target.protein;
+}
