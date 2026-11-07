@@ -5,6 +5,9 @@ import { LinkButton } from "@/components/link-button";
 import { AnalyticsFilters } from "@/components/analytics/filters";
 import { resolveRange } from "@/lib/analytics-range";
 import { HabitRanking } from "@/components/analytics/habit-ranking";
+import { NutritionSection } from "@/components/analytics/nutrition-section";
+import { loadNutritionPeriod, loadNutritionProfile } from "@/lib/data/nutrition";
+import { hasNutrition } from "@/lib/domain/nutrition";
 import { ChartFrame, DataTable, LegendLine } from "@/components/charts/chart-frame";
 import { TrendChart } from "@/components/charts/trend-chart";
 import { ColumnChart } from "@/components/charts/column-chart";
@@ -31,7 +34,11 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const habitId = habits.some((h) => h.id === s.habit) ? s.habit! : null;
   const categoryId = categories.some((c) => c.id === s.category) ? s.category! : null;
   const compare = s.compare !== "0";
-  const data = await loadAnalytics(user.id, { from, to, habitId, categoryId, compare }, user.today, user.prefs.weekStartsOn);
+  const [data, food, profile] = await Promise.all([
+    loadAnalytics(user.id, { from, to, habitId, categoryId, compare }, user.today, user.prefs.weekStartsOn),
+    loadNutritionPeriod(user.id, from, to, user.today),
+    loadNutritionProfile(user.id),
+  ]);
 
   return (
     <Page>
@@ -65,6 +72,8 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       ) : (
         <Body data={data} today={user.today} weekStartsOn={user.prefs.weekStartsOn} compare={compare} />
       )}
+
+      {hasNutrition(food) && <NutritionSection s={food} calorieTarget={profile?.calorieTarget ?? null} proteinTarget={profile?.proteinTarget ?? null} />}
     </Page>
   );
 }

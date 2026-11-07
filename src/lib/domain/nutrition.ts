@@ -1,6 +1,8 @@
 // Nutrition maths: suggested daily targets from body details, and day totals. Pure functions only.
 // Targets are estimates for healthy adults, not medical advice; the page says so.
 
+import type { ISODate } from "./dates";
+
 export type Sex = "male" | "female";
 export type Activity = "sedentary" | "light" | "moderate" | "active" | "very";
 export type Goal = "lose" | "keep" | "gain";
@@ -113,4 +115,91 @@ export function share(value: number, target: number | null | undefined): number 
 export function onTarget(eaten: { calories: number; protein: number }, target: { calories: number; protein: number }): boolean {
   if (eaten.calories <= 0 || target.calories <= 0) return false;
   return Math.abs(eaten.calories - target.calories) <= target.calories * 0.1 && eaten.protein >= target.protein;
+}
+
+export interface NutritionDay {
+  date: ISODate;
+  calories: number;
+  protein: number;
+  waterMl: number;
+  logged: boolean; // any food logged that day
+}
+
+export interface NutritionSummary {
+  days: NutritionDay[];
+  loggedDays: number;
+  avgCalories: number | null;
+  avgProtein: number | null;
+  /** Days on target, out of logged days; null without targets. */
+  onTargetDays: number | null;
+  waterDays: number;
+  avgWaterMl: number | null;
+  waterGoalDays: number;
+  weights: { date: ISODate; kg: number }[];
+  weightFirst: { date: ISODate; kg: number } | null;
+  weightLast: { date: ISODate; kg: number } | null;
+}
+
+/**
+ * A period's eating, drinking and weight, measured against the user's current targets.
+ * Averages are over days that have something logged, so unlogged days don't drag them to zero.
+ */
+export function summarizeNutrition(input: {
+  dates: ISODate[];
+  food: Map<ISODate, { calories: number; protein: number }>;
+  water: Map<ISODate, number>;
+  weights: { date: ISODate; kg: number }[];
+  targets: { calories: number; protein: number } | null;
+  waterTargetMl: number;
+}): NutritionSummary {
+  const days: NutritionDay[] = input.dates.map((date) => {
+    const f = input.food.get(date);
+    return { date, calories: Math.round(f?.calories ?? 0), protein: Math.round(f?.protein ?? 0), waterMl: input.water.get(date) ?? 0, logged: Boolean(f && f.calories > 0) };
+  });
+  const logged = days.filter((d) => d.logged);
+  const watered = days.filter((d) => d.waterMl > 0);
+  const mean = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
+  const weights = [...input.weights].filter((w) => input.dates.includes(w.date)).sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    days,
+    loggedDays: logged.length,
+    avgCalories: mean(logged.map((d) => d.calories)),
+    avgProtein: mean(logged.map((d) => d.protein)),
+    onTargetDays: input.targets ? logged.filter((d) => onTarget(d, input.targets!)).length : null,
+    waterDays: watered.length,
+    avgWaterMl: mean(watered.map((d) => d.waterMl)),
+    waterGoalDays: watered.filter((d) => d.waterMl >= input.waterTargetMl).length,
+    weights,
+    weightFirst: weights[0] ?? null,
+    weightLast: weights.length > 1 ? weights[weights.length - 1] : null,
+  };
+}
+
+/** True when a period has anything nutrition-related worth showing. */
+export const hasNutrition = (s: NutritionSummary) => s.loggedDays > 0 || s.waterDays > 0 || s.weightFirst !== null;
+
+/** The period in plain sentences, for the monthly review and the monthly email. */
+export function nutritionLines(s: NutritionSummary): string[] {
+  const out: string[] = [];
+  const total = s.days.length;
+  if (s.loggedDays > 0) {
+    out.push(`You logged food on ${s.loggedDays} of ${total} ${total === 1 ? "day" : "days"}, averaging ${s.avgCalories!.toLocaleString("en-US")} kcal and ${s.avgProtein} g protein.`);
+    if (s.onTargetDays !== null)
+      out.push(s.loggedDays === 1 ? (s.onTargetDays ? "That day was on target." : "That day wasn't on target.") : `You were on target on ${s.onTargetDays} of those ${s.loggedDays} days.`);
+  }
+  if (s.waterDays > 0) {
+    const l = (s.avgWaterMl! / 1000).toFixed(2).replace(/0$/, "");
+    out.push(
+      s.waterGoalDays === 0
+        ? `You didn't reach your water goal, averaging ${l} L on days you logged water.`
+        : `You reached your water goal on ${s.waterGoalDays} ${s.waterGoalDays === 1 ? "day" : "days"}, averaging ${l} L on days you logged water.`,
+    );
+  }
+  if (s.weightFirst && s.weightLast) {
+    const diff = Math.round((s.weightLast.kg - s.weightFirst.kg) * 10) / 10;
+    out.push(diff === 0 ? `Your weight held at ${s.weightLast.kg} kg.` : `Your weight went from ${s.weightFirst.kg} kg to ${s.weightLast.kg} kg (${diff > 0 ? "+" : "−"}${Math.abs(diff)} kg).`);
+  } else if (s.weightFirst) {
+    out.push(`You weighed in once, at ${s.weightFirst.kg} kg.`);
+  }
+  return out;
 }

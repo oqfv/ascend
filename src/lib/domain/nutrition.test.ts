@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { onTarget, portion, restingCalories, share, suggestTargets, sumMacros, waterTarget, type Body } from "./nutrition";
+import { hasNutrition, nutritionLines, onTarget, portion, summarizeNutrition, restingCalories, share, suggestTargets, sumMacros, waterTarget, type Body } from "./nutrition";
 
 const adult: Body = { sex: "male", birthYear: 2000, heightCm: 180, weightKg: 80, activity: "moderate", goal: "keep" };
 
@@ -74,5 +74,65 @@ describe("waterTarget", () => {
     expect(waterTarget(null, 30)).toBe(1500);
     expect(waterTarget(null, 200)).toBe(4000);
     expect(waterTarget(null, null)).toBe(2000);
+  });
+});
+
+describe("summarizeNutrition", () => {
+  const dates = ["2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04"];
+  const s = summarizeNutrition({
+    dates,
+    food: new Map([
+      ["2026-10-01", { calories: 2000, protein: 150 }],
+      ["2026-10-02", { calories: 2500, protein: 100 }],
+    ]),
+    water: new Map([
+      ["2026-10-01", 2500],
+      ["2026-10-03", 1000],
+    ]),
+    weights: [
+      { date: "2026-10-04", kg: 79.2 },
+      { date: "2026-10-01", kg: 80 },
+      { date: "2026-09-20", kg: 82 },
+    ],
+    targets: { calories: 2000, protein: 150 },
+    waterTargetMl: 2500,
+  });
+  it("averages over logged days only", () => {
+    expect(s.loggedDays).toBe(2);
+    expect(s.avgCalories).toBe(2250);
+    expect(s.avgProtein).toBe(125);
+    expect(s.onTargetDays).toBe(1);
+  });
+  it("counts water and weight inside the period", () => {
+    expect(s.waterDays).toBe(2);
+    expect(s.avgWaterMl).toBe(1750);
+    expect(s.waterGoalDays).toBe(1);
+    expect(s.weightFirst).toEqual({ date: "2026-10-01", kg: 80 });
+    expect(s.weightLast).toEqual({ date: "2026-10-04", kg: 79.2 });
+  });
+  it("has no on-target count without targets", () => {
+    const empty = summarizeNutrition({ dates, food: new Map(), water: new Map(), weights: [], targets: null, waterTargetMl: 2000 });
+    expect(empty.onTargetDays).toBeNull();
+    expect(empty.avgCalories).toBeNull();
+    expect(hasNutrition(empty)).toBe(false);
+  });
+});
+
+describe("nutritionLines", () => {
+  it("says the period in plain sentences", () => {
+    const s = summarizeNutrition({
+      dates: ["2026-10-01", "2026-10-02"],
+      food: new Map([["2026-10-01", { calories: 2000, protein: 150 }]]),
+      water: new Map([["2026-10-02", 3000]]),
+      weights: [{ date: "2026-10-01", kg: 80 }, { date: "2026-10-02", kg: 79.6 }],
+      targets: { calories: 2000, protein: 150 },
+      waterTargetMl: 2500,
+    });
+    expect(nutritionLines(s)).toEqual([
+      "You logged food on 1 of 2 days, averaging 2,000 kcal and 150 g protein.",
+      "That day was on target.",
+      "You reached your water goal on 1 day, averaging 3.0 L on days you logged water.",
+      "Your weight went from 80 kg to 79.6 kg (−0.4 kg).",
+    ]);
   });
 });

@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { toDbDate, type ISODate } from "@/lib/domain/dates";
-import type { Macros } from "@/lib/domain/nutrition";
+import { eachDay, toDbDate, type ISODate } from "@/lib/domain/dates";
+import { summarizeNutrition, waterTarget, type Macros } from "@/lib/domain/nutrition";
 
 export async function loadNutritionProfile(userId: string) {
   return db.nutritionProfile.findUnique({ where: { userId } });
@@ -45,4 +45,26 @@ export async function loadRecentFoods(userId: string, limit = 12): Promise<Recen
     if (out.length >= limit) break;
   }
   return out;
+}
+
+/** Food, water and weight for a period (clipped to today), summarised against the current targets. */
+export async function loadNutritionPeriod(userId: string, from: ISODate, to: ISODate, today: ISODate) {
+  const end = to > today ? today : to;
+  const range = { gte: toDbDate(from), lte: toDbDate(end) };
+  const [profile, food, water, weights, latestWeight] = await Promise.all([
+    db.nutritionProfile.findUnique({ where: { userId } }),
+    db.foodEntry.groupBy({ by: ["date"], where: { userId, date: range }, _sum: { calories: true, protein: true } }),
+    db.waterLog.findMany({ where: { userId, date: range }, select: { date: true, ml: true } }),
+    db.bodyWeight.findMany({ where: { userId, date: range }, select: { date: true, kg: true }, orderBy: { date: "asc" } }),
+    db.bodyWeight.findFirst({ where: { userId }, orderBy: { date: "desc" }, select: { kg: true } }),
+  ]);
+  const day = (d: Date) => d.toISOString().slice(0, 10);
+  return summarizeNutrition({
+    dates: from <= end ? eachDay(from, end) : [],
+    food: new Map(food.map((f) => [day(f.date), { calories: f._sum.calories ?? 0, protein: f._sum.protein ?? 0 }])),
+    water: new Map(water.map((w) => [day(w.date), w.ml])),
+    weights: weights.map((w) => ({ date: day(w.date), kg: w.kg })),
+    targets: profile ? { calories: profile.calorieTarget, protein: profile.proteinTarget } : null,
+    waterTargetMl: waterTarget(profile?.waterTargetMl, profile?.weightKg ?? latestWeight?.kg),
+  });
 }

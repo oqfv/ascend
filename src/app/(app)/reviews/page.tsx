@@ -9,6 +9,8 @@ import { BarList } from "@/components/charts/bar-list";
 import { ReflectionForm } from "@/components/reviews/reflection-form";
 import { loadReview, periodFor, type ReviewData, type ReviewView } from "@/lib/data/reviews";
 import { addDays, addMonths, isISODate, type ISODate } from "@/lib/domain/dates";
+import { loadNutritionPeriod } from "@/lib/data/nutrition";
+import { hasNutrition, nutritionLines } from "@/lib/domain/nutrition";
 import { formatAmount, formatDay, formatMinutes, formatMonth, formatPercent, formatPoints, formatProgress, formatRange, plural, weekdayName } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -31,6 +33,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   const view = (VIEWS.find((v) => v.value === s.view)?.value ?? "week") as ReviewView;
   const date = s.date && isISODate(s.date) && s.date <= user.today ? s.date : user.today;
   const d = await loadReview(user.id, view, date, user.today, user.prefs.weekStartsOn);
+  const food = view === "day" ? null : await loadNutritionPeriod(user.id, d.from, d.to, user.today);
   const href = (v: ReviewView, at: ISODate) => `/reviews?view=${v}${at === user.today ? "" : `&date=${at}`}`;
   // The next period is reachable when it has started; land on today if it is the current one.
   const nextStart = shift(view, date, 1);
@@ -98,6 +101,20 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
         <DayReview d={d} journal={user.prefs.journalEnabled} />
       ) : (
         <PeriodReview d={d} />
+      )}
+
+      {food && hasNutrition(food) && (
+        <section aria-labelledby="review-nutrition" className="mt-4 rounded-2xl bg-surface p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 id="review-nutrition" className="text-sm font-medium">Nutrition</h2>
+            <Link href="/analytics" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Charts in Analytics</Link>
+          </div>
+          <ul className="mt-3 grid list-disc gap-2 pl-5">
+            {nutritionLines(food).map((l) => (
+              <li key={l}>{l}</li>
+            ))}
+          </ul>
+        </section>
       )}
     </Page>
   );

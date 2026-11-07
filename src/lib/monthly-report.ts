@@ -1,6 +1,8 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { loadReview } from "@/lib/data/reviews";
+import { loadNutritionPeriod } from "@/lib/data/nutrition";
+import { nutritionLines } from "@/lib/domain/nutrition";
 import { addMonths, startOfMonth, type ISODate } from "@/lib/domain/dates";
 import { escapeHtml, type Message } from "@/lib/email";
 import { formatMonth, plural } from "@/lib/format";
@@ -74,6 +76,9 @@ export async function buildMonthlyReport(user: {
   const journal = [mood && `mood ${mood.toFixed(1)}`, energy && `energy ${energy.toFixed(1)}`, sleep && `sleep ${sleep.toFixed(1)}`].filter(Boolean);
   if (journal.length) lines.push(`Your journal averaged ${journal.join(", ")} out of 5.`);
 
+  // Eating, water and weight, only for people who use Nutrition.
+  const food = nutritionLines(await loadNutritionPeriod(user.id, d.from, d.to, user.today));
+
   const reviewUrl = `${SITE_URL}/reviews?view=month&date=${d.from}`;
   const unsubscribeUrl = `${SITE_URL}/unsubscribe?${unsubscribeQuery(user.id)}`;
   const first = user.name.split(" ")[0] || "there";
@@ -85,6 +90,7 @@ export async function buildMonthlyReport(user: {
     "",
     ...lines.map((l) => `- ${l}`),
     "",
+    ...(food.length ? ["Nutrition:", ...food.map((l) => `- ${l}`), ""] : []),
     `See the full review: ${reviewUrl}`,
     "",
     `You get this because you turned on the monthly report. Stop it here: ${unsubscribeUrl}`,
@@ -105,7 +111,11 @@ export async function buildMonthlyReport(user: {
 <ul style="margin:0 0 24px;padding-left:20px;font-size:16px;line-height:24px">
 ${lines.map((l) => `<li style="margin:0 0 8px">${escapeHtml(l)}</li>`).join("\n")}
 </ul>
-<a href="${escapeHtml(reviewUrl)}" style="display:inline-block;background:#1f201d;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;padding:12px 20px;border-radius:999px">Open your ${escapeHtml(shortMonth)} review</a>
+${food.length ? `<p style="margin:0 0 8px;font-size:16px;line-height:24px;font-weight:600">Nutrition</p>
+<ul style="margin:0 0 24px;padding-left:20px;font-size:16px;line-height:24px">
+${food.map((l) => `<li style="margin:0 0 8px">${escapeHtml(l)}</li>`).join("\n")}
+</ul>
+` : ""}<a href="${escapeHtml(reviewUrl)}" style="display:inline-block;background:#1f201d;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;padding:12px 20px;border-radius:999px">Open your ${escapeHtml(shortMonth)} review</a>
 <p style="margin:32px 0 0;font-size:13px;line-height:20px;color:#5e5f5b">You get this because you turned on the monthly report in Ascend. <a href="${escapeHtml(unsubscribeUrl)}" style="color:#5e5f5b">Unsubscribe</a> or change it in Settings.</p>
 </td></tr></table></td></tr></table></body></html>`;
 
