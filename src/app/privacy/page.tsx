@@ -30,6 +30,10 @@ const SECTIONS: LegalSection[] = [
           year, height, weight, activity level and goal). These are health details, so they get the same protection as everything else.
         </li>
         <li>
+          If you turn on notifications: the address your browser gives Ascend for sending them, and a short device name like
+          &ldquo;Android, Chrome&rdquo;, for each device you turn them on for. Turning them off deletes it.
+        </li>
+        <li>
           Counters that slow down repeated sign-in and reset attempts. They are tied to a scrambled form of your IP address or email,
           never the address itself, and are deleted after a day.
         </li>
@@ -78,6 +82,10 @@ const SECTIONS: LegalSection[] = [
         <p>
           Food search asks Open Food Facts and USDA FoodData Central for nutrition values, and Describe it asks CalorieNinjas. They receive only the words you type,
           never your name, email or account.
+        </p>
+        <p>
+          Notifications are delivered by your browser&apos;s own push service (Google, Apple, Mozilla or Microsoft, depending on the
+          browser). Each one is encrypted for your device, so the push service can&apos;t read it.
         </p>
         <p>All connections are encrypted. Fonts are served from Ascend itself, so loading a page doesn&apos;t contact any other company.</p>
       </>

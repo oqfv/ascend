@@ -419,7 +419,7 @@ export function HabitForm({
         )}
       </Section>
 
-      <Section title="Dates and reminder" note="Reminder times show on your Today list. Push notifications aren't switched on yet.">
+      <Section title="Dates and reminder" note="You get a notification at this time if the habit isn't done yet. Turn notifications on in Settings.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Starts" error={err("startDate")}>
             {(p) => <Input {...p} type="date" {...register("startDate")} />}

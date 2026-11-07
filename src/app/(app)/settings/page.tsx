@@ -3,7 +3,9 @@ import { Download } from "lucide-react";
 import { Page, PageHeader } from "@/components/page-header";
 import { LinkButton } from "@/components/link-button";
 import { DeleteAccountForm, EmailForm, MonthlyReportForm, PasswordForm, PreferencesForm, RestartTourButton, ThemeForm } from "@/components/settings/settings-forms";
+import { PushSettings } from "@/components/settings/push-settings";
 import { hasRealEmail } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -11,6 +13,7 @@ export const metadata: Metadata = { title: "Settings" };
 export default async function SettingsPage() {
   const user = await requireUser();
   const email = hasRealEmail(user.email) ? user.email : null;
+  const devices = await db.pushSubscription.count({ where: { userId: user.id } });
   return (
     <Page className="max-w-[1040px]">
       <PageHeader title="Settings" description={`Signed in as @${user.username}.`} />
@@ -55,11 +58,8 @@ export default async function SettingsPage() {
             </LinkButton>
           </div>
         </Section>
-        <Section title="Notifications" description="What reminders do today.">
-          <p className="text-muted-foreground">
-            Reminder times show on your Today list, and the daily review link appears after the time you set above. Phone
-            notifications aren&apos;t available yet.
-          </p>
+        <Section id="notifications" title="Notifications" description="Habit reminders on your phone or computer. Turn them on for each device you use.">
+          <PushSettings devices={devices} />
         </Section>
         <Section title="Welcome tour" description="The short walkthrough you saw when you joined.">
           <div>

@@ -36,6 +36,8 @@ model User {
   foodEntries       FoodEntry[]
   waterLogs         WaterLog[]
   bodyWeights       BodyWeight[]
+  pushSubscriptions PushSubscription[]
+  remindersSent     ReminderSent[]
 
   @@map("user")
 }
@@ -361,4 +363,34 @@ model BodyWeight {
 
   @@id([userId, date])
   @@map("body_weight")
+}
+
+// ---------- Notifications ----------
+
+// A device the user turned phone/browser notifications on for (Web Push).
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  device     String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  lastUsedAt DateTime? @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("push_subscription")
+}
+
+// A reminder already sent, so each goes out at most once a day. key = habit id.
+model ReminderSent {
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   DateTime @db.Date
+  key    String
+  sentAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@id([userId, date, key])
+  @@map("reminder_sent")
 }
