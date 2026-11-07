@@ -15,11 +15,11 @@ export interface PushMessage {
 
 let configured = false;
 export function pushConfigured(): boolean {
-  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const priv = process.env.VAPID_PRIVATE_KEY;
+  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
+  const priv = process.env.VAPID_PRIVATE_KEY?.trim();
   if (!pub || !priv) return false;
   if (!configured) {
-    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:ascend.habittracker@gmail.com", pub, priv);
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT?.trim() || "mailto:ascend.habittracker@gmail.com", pub, priv);
     configured = true;
   }
   return true;

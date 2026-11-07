@@ -8,7 +8,7 @@ import { removeAllPushSubscriptions, removePushSubscription, savePushSubscriptio
 
 type State = "loading" | "unsupported" | "ios-needs-home-screen" | "blocked" | "off" | "on";
 
-const KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+const KEY = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim();
 
 function keyBytes(base64: string): Uint8Array<ArrayBuffer> {
   const b64 = (base64 + "=".repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");

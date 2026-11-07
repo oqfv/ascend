@@ -9,7 +9,7 @@ export type MealItem = { name: string; grams: number; per100: Macros };
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
 export async function describeMeal(text: string): Promise<MealItem[]> {
-  const key = process.env.CALORIENINJAS_API_KEY;
+  const key = process.env.CALORIENINJAS_API_KEY?.trim();
   if (!key) throw new Error("not-configured");
   const url = new URL("https://api.calorieninjas.com/v1/nutrition");
   url.searchParams.set("query", text);
